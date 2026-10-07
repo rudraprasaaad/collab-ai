@@ -1,10 +1,28 @@
 export class AppConfig {
   readonly port: number;
+  readonly heartbeatIntervalMs: number;
 
   constructor(env: NodeJS.ProcessEnv = process.env) {
-    this.port = Number(env.PORT ?? 1234);
-    if (Number.isNaN(this.port)) {
-      throw new Error(`Invalid PORT: ${env.PORT}`);
+    this.port = AppConfig.readPositiveInt(env, "PORT", 1234);
+    this.heartbeatIntervalMs = AppConfig.readPositiveInt(
+      env,
+      "HEARTBEAT_INTERVAL_MS",
+      30_000,
+    );
+  }
+
+  private static readPositiveInt(
+    env: NodeJS.ProcessEnv,
+    key: string,
+    fallback: number,
+  ): number {
+    const raw = env[key];
+    if (raw === undefined) return fallback;
+
+    const value = Number(raw);
+    if (!Number.isInteger(value) || value <= 0) {
+      throw new Error(`Invalid ${key}: ${raw}`);
     }
+    return value;
   }
 }
