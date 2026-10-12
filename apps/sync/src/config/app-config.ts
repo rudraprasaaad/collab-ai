@@ -1,6 +1,7 @@
 export class AppConfig {
   readonly port: number;
   readonly heartbeatIntervalMs: number;
+  readonly shutdownTimeoutMs: number;
 
   constructor(env: NodeJS.ProcessEnv = process.env) {
     this.port = AppConfig.readPositiveInt(env, "PORT", 1234);
@@ -8,6 +9,11 @@ export class AppConfig {
       env,
       "HEARTBEAT_INTERVAL_MS",
       30_000,
+    );
+    this.shutdownTimeoutMs = AppConfig.readPositiveInt(
+      env,
+      "SHUTDOWN_TIMEOUT_MS",
+      10_000,
     );
   }
 
