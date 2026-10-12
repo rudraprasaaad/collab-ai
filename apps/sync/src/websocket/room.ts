@@ -3,7 +3,9 @@ import { WebSocket, type RawData } from "ws";
 export class Room {
   private readonly sockets = new Set<WebSocket>();
 
-  constructor(readonly docId: string) {}
+  get size(): number {
+    return this.sockets.size;
+  }
 
   add(socket: WebSocket): void {
     this.sockets.add(socket);

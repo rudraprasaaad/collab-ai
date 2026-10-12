@@ -1,10 +1,12 @@
 import { WebSocketServer } from "ws";
 import { DocumentPathParser } from "./document-path-parser";
 import { ConnectionHandler } from "./connection-handler";
-import { IncomingMessage } from "node:http";
+import { ClientRequest, IncomingMessage } from "node:http";
 import { Duplex } from "node:stream";
 
 export class WebSocketGateWay {
+  readonly name = "websocket-gateway";
+
   private readonly wss = new WebSocketServer({ noServer: true });
 
   constructor(
@@ -15,17 +17,22 @@ export class WebSocketGateWay {
   handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void {
     const docId = this.pathParser.parse(req.url);
     if (!docId) {
-      this.reject(socket, 404, "Not Found");
+      socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
+      socket.destroy();
       return;
     }
-
     this.wss.handleUpgrade(req, socket, head, (ws) => {
       this.handler.onConnection(ws, { docId });
     });
   }
 
-  private reject(socket: Duplex, status: number, text: string): void {
-    socket.write(`HTTP/1.1 ${status} ${text}\r\nConnection: close\r\n\r\n`);
-    socket.destroy();
+  async stop(): Promise<void> {
+    for (const client of this.wss.clients) {
+      client.close(1001, "server shutting down");
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      this.wss.close((err) => (err ? reject(err) : resolve()));
+    });
   }
 }

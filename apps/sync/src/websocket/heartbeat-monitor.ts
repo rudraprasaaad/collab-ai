@@ -2,6 +2,8 @@ import { Logger } from "../core/logger";
 import type { WebSocket } from "ws";
 
 export class HeartbeatMonitor {
+  readonly name = "heartbeat";
+
   private readonly aliveBySocket = new Map<WebSocket, boolean>();
   private timer: NodeJS.Timeout | null = null;
 

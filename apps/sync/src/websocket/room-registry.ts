@@ -10,7 +10,7 @@ export class RoomRegistry {
   join(docId: string, socket: WebSocket): void {
     let room = this.rooms.get(docId);
     if (!room) {
-      room = new Room(docId);
+      room = new Room();
       this.rooms.set(docId, room);
       this.logger.info("room created", { docId });
     }
@@ -38,5 +38,11 @@ export class RoomRegistry {
 
   roomCount(): number {
     return this.rooms.size;
+  }
+
+  connectionCount(): number {
+    let total = 0;
+    for (const room of this.rooms.values()) total += room.size;
+    return total;
   }
 }
