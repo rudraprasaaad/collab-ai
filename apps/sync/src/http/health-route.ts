@@ -1,16 +1,30 @@
 import { IncomingMessage, ServerResponse } from "node:http";
 import { RouteHandler } from "./route-handler";
+import { RuntimeStats } from "../core/runtime-stats";
+import { ServerState } from "../core/server-state";
 
 export class HealthRoute implements RouteHandler {
+  constructor(
+    private readonly stats: RuntimeStats,
+    private readonly state: ServerState,
+  ) {}
+
   matches(req: IncomingMessage): boolean {
-    const path = req.url?.split("?")[0];
-    return req.method === "GET" && path === "/health";
+    return req.method === "GET" && req.url === "/health";
   }
 
   handle(_req: IncomingMessage, res: ServerResponse): void {
-    res.writeHead(200, {
-      "Content-Type": "application/json",
+    const draining = this.state.isShuttingDown();
+    res.writeHead(draining ? 503 : 200, {
+      "content-type": "application/json",
     });
-    res.end(JSON.stringify({ status: "ok" }));
+    res.end(
+      JSON.stringify({
+        status: draining ? "shutting_down" : "ok",
+        connections: this.stats.connectionCount(),
+        rooms: this.stats.roomCount(),
+        uptimeSeconds: Math.floor(process.uptime()),
+      }),
+    );
   }
 }

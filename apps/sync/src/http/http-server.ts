@@ -2,6 +2,7 @@ import http, { IncomingMessage, ServerResponse } from "node:http";
 import { Duplex } from "node:stream";
 import { RouteHandler } from "./route-handler";
 import { Logger } from "../core/logger";
+import { Stoppable } from "../core/stoppable";
 
 export type UpgradeListener = (
   req: IncomingMessage,
@@ -9,7 +10,9 @@ export type UpgradeListener = (
   head: Buffer,
 ) => void;
 
-export class HttpServer {
+export class HttpServer implements Stoppable {
+  readonly name = "http-server";
+
   private readonly server: http.Server;
 
   constructor(
@@ -32,19 +35,26 @@ export class HttpServer {
     });
   }
 
+  stop(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.server.close((err) => (err ? reject(err) : resolve()));
+      this.server.closeIdleConnections();
+    });
+  }
+
   private dispatch(req: IncomingMessage, res: ServerResponse): void {
     const route = this.routes.find((r) => r.matches(req));
-    if (!route) {
-      res.writeHead(404, {
-        "Content-Type": "application/json",
-      });
-      res.end(
-        JSON.stringify({
-          error: "Not found",
-        }),
-      );
+    if (route) {
+      route.handle(req, res);
       return;
     }
-    route.handle(req, res);
+    res.writeHead(404, {
+      "Content-Type": "application/json",
+    });
+    res.end(
+      JSON.stringify({
+        error: "Not found",
+      }),
+    );
   }
 }
